@@ -1,2 +1,5 @@
 # Editor configs
 .vscode
+
+# Bazel
+bazel-*
