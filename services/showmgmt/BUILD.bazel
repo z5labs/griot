@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "showmgmt_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/z5labs/griot/services/showmgmt",
+    visibility = ["//visibility:private"],
+    deps = ["//services/showmgmt/cmd"],
+)
+
+go_binary(
+    name = "showmgmt",
+    embed = [":showmgmt_lib"],
+    visibility = ["//visibility:public"],
+)
