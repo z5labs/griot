@@ -39,6 +39,25 @@ jobs:
 
       - name: Build
         run: bazel build //...
+  
+  test:
+    needs:
+      - build
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Setup bazelisk
+        uses: bazelbuild/setup-bazelisk@v2
+
+      - name: Mount bazel cache
+        uses: actions/cache@v3
+        with:
+          path: "~/.cache/bazel"
+          key: bazel
 
       - name: Test
         run: bazel coverage //...
