@@ -19,6 +19,7 @@ import (
 
 	"github.com/z5labs/griot/services/showmgmt/http"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -40,9 +41,12 @@ func withServeHttpCmd() func(*viper.Viper) *cobra.Command {
 					}
 				}
 
-				s, err := http.NewShowMgmtService(http.ServiceConfig{
+				fs := afero.NewBasePathFs(afero.NewOsFs(), v.GetString("content-dir"))
+				cfg := http.ServiceConfig{
 					Logger: zap.L(),
-				})
+					Dir:    fs,
+				}
+				s, err := http.NewShowMgmtService(cfg)
 				if err != nil {
 					zap.L().Error("failed to initialize show mgmt service", zap.String("addr", addr), zap.Error(err))
 					return Error{
@@ -64,8 +68,10 @@ func withServeHttpCmd() func(*viper.Viper) *cobra.Command {
 		}
 
 		cmd.Flags().String("addr", ":0", "")
+		cmd.Flags().String("content-dir", ".", "Specify root directory for shows to be stored in.")
 
 		v.BindPFlag("addr", cmd.Flags().Lookup("addr"))
+		v.BindPFlag("content-dir", cmd.Flags().Lookup("content-dir"))
 
 		return cmd
 	}
