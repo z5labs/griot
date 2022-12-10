@@ -18,52 +18,82 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
+	"github.com/spf13/afero"
 	"go.uber.org/zap"
 )
 
-type ShowMgmtService struct {
-	log      *zap.Logger
-	handlers []func(*ShowMgmtService) func(*fiber.App)
+type pathHandler struct {
+	method  string
+	path    string
+	handler func(*fiber.Ctx) error
 }
 
+func post(path string, handler func(*fiber.Ctx) error) pathHandler {
+	return pathHandler{
+		method:  fiber.MethodPost,
+		path:    path,
+		handler: handler,
+	}
+}
+
+// ShowMgmtService
+type ShowMgmtService struct {
+	app *fiber.App
+
+	log       *zap.Logger
+	validator *validator.Validate
+	fs        afero.Fs
+}
+
+// ServiceConfig
 type ServiceConfig struct {
 	Logger *zap.Logger
+	Dir    afero.Fs
 }
 
 // NewShowMgmtService
 func NewShowMgmtService(cfg ServiceConfig) (*ShowMgmtService, error) {
 	s := &ShowMgmtService{
-		log: cfg.Logger,
+		app:       fiber.New(),
+		log:       cfg.Logger,
+		validator: validator.New(),
+		fs:        cfg.Dir,
 	}
-	return s, nil
-}
+	s.app.Server().StreamRequestBody = true
+	s.app.Use(cors.New())
+	s.app.Use(pprof.New())
 
-// WithHandler
-func (s *ShowMgmtService) WithHandler(h func(*ShowMgmtService) func(*fiber.App)) *ShowMgmtService {
-	s.handlers = append(s.handlers, h)
-	return s
+	phs := []pathHandler{
+		addEpisodeHandler(s),
+	}
+	for _, ph := range phs {
+		switch ph.method {
+		case fiber.MethodPost:
+			s.app.Post(ph.path, ph.handler)
+		default:
+			return nil, errors.New("unknown method")
+		}
+	}
+
+	s.app.Use(func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusNotFound)
+	})
+
+	return s, nil
 }
 
 // Serve
 func (s *ShowMgmtService) Serve(ctx context.Context, ls net.Listener) error {
-	app := fiber.New()
-
-	app.Use(pprof.New())
-	app.Use(func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusNotFound)
-	})
-
-	for _, h := range s.handlers {
-		h(s)(app)
-	}
-
 	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)
-		err := app.Listener(ls)
+		err := s.app.Listener(ls)
 		if err == nil || errors.Is(err, context.Canceled) {
 			return
 		}
@@ -72,7 +102,7 @@ func (s *ShowMgmtService) Serve(ctx context.Context, ls net.Listener) error {
 
 	select {
 	case <-ctx.Done():
-		err := app.Shutdown()
+		err := s.app.Shutdown()
 		if err == nil {
 			return nil
 		}
@@ -85,4 +115,8 @@ func (s *ShowMgmtService) Serve(ctx context.Context, ls net.Listener) error {
 		zap.L().Error("received unexpected error from http server", zap.Error(err))
 		return err
 	}
+}
+
+func (s *ShowMgmtService) test(req *http.Request, msTimeout ...int) (resp *http.Response, err error) {
+	return s.app.Test(req, msTimeout...)
 }
