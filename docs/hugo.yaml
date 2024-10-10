@@ -1,0 +1,67 @@
+title: griot - The modern media management platform
+language: en-us
+
+module:
+  hugoVersion:
+    extended: true
+    min: "0.73.0"
+  imports:
+    - path: "github.com/google/docsy"
+
+enableRobotsTXT: true
+
+# Will give values to .Lastmod etc.
+enableGitInfo: true
+
+imaging:
+  resampleFilter: CatmullRom
+  quality: 75
+  anchor: smart
+
+# Highlighting config
+pygmentsCodeFences: true
+pygmentsUseClasses: false
+# Use the new Chroma Go highlighter in Hugo.
+pygmentsUseClassic: false
+# pygmentsOptions: "linenos=table"
+# See https://help.farbox.com/pygments.html
+pygmentsStyle: tango
+
+markup:
+  goldmark:
+    parser:
+      attribute:
+        block: true
+    renderer:
+      unsafe: true
+  highlight:
+    style: tango
+
+outputs:
+  section: [HTML, print, RSS]
+
+params:
+  github_repo: https://github.com/z5labs/griot
+  github_project_repo: https://github.com/z5labs/griot
+
+  offlineSearch: true
+  prism_syntax_highlighting: false
+
+  copyright:
+    authors: Z5Labs and Contributors | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) |
+    from_year: 2024
+
+  ui:
+    showLightDarkModeMenu: true
+    breadcrumb_disable: false
+    navbar_logo: false
+    navbar_translucent_over_cover_disable: false
+    sidebar_menu_compact: false
+    sidebar_search_disable: true
+
+  links:
+    developer:
+      - name: GitHub
+        url: https://github.com/z5labs/griot
+        icon: fab fa-github
+        desc: Development takes place here!
