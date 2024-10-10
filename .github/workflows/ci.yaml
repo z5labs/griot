@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - '**.bazel'
+      - '.bazelversion'
+      - '.bazelrc'
+      - 'go.mod'
+      - 'go.sum'
+      - 'MODULE.bazel'
+      - 'MODULE.bazel.lock'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - '**.bazel'
+      - '.bazelversion'
+      - '.bazelrc'
+      - 'go.mod'
+      - 'go.sum'
+      - 'MODULE.bazel'
+      - 'MODULE.bazel.lock'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
+      - name: Generate build version
+        id: info
+        run: |
+          formatted_date=$(date +'%Y.%m.%d')
+          time=$(date +'%H%M%S')
+          short_commit_id=$(git rev-parse --short HEAD)
+          echo "build_version=${formatted_date}.${time}.${short_commit_id}" >> $GITHUB_OUTPUT
+
+      - name: Mount Bazel cache
+        uses: actions/cache@3624ceb22c1c5a301c8db4169662070a689d9ea8 # v4
+        with:
+          path: |
+            ~/.cache/bazel
+          key: ${{ runner.os }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'MODULE.bazel') }}
+          restore-keys: |
+            ${{ runner.os }}-bazel-
+
+      - name: Fetch dependencies
+        run: bazel fetch //...
+
+      - name: Build
+        run: bazel build //...
+
+      - name: Test
+        run: bazel test //...
+
+      - name: Build Container Images
+        run: |
+          tarballTargets=$(bazel query "kind(filegroup, //...)" | grep ".tar$")
+            while IFS=';' read -ra tarballs; do
+            for tarball in "${tarballs[@]}"; do
+                bazel build $tarball
+            done
+            done <<< "$tarballTargets"
