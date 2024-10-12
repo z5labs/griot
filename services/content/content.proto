@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package griot.content;
+
+option go_package = "github.com/z5labs/griot/services/content/contentpb;contentpb";
+
+enum HashFunc {
+    SHA256 = 0;
+}
+
+message Checksum {
+    HashFunc hash_func = 1;
+    bytes hash = 2;
+}
+
+message Metadata {
+    Checksum checksum = 1;
+    string name = 2;
+}
+
+message UploadContentV1Response {
+    string id = 1;
+}
