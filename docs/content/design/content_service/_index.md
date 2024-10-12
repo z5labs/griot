@@ -12,7 +12,7 @@ and indexing content from users.
 ```mermaid
 architecture-beta
     service content(server)[Content Service]
-    service index(database)[Metadata Index]
+    service index(database)[Content Index]
     service objects(database)[Object Storage]
 
     content:R -- L:index
