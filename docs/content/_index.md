@@ -12,3 +12,7 @@ no_list: true
 *events of his time. It is his responsibility to pass this knowledge on*
 *to future generations, as well as that of past times passed down to him*
 *by his ancestors.*
+
+## Welcome!
+
+griot is your one stop shop for storing and interacting with content.
