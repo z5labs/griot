@@ -48,7 +48,7 @@ sequenceDiagram
 |--------------|
 | application/x-protobuf |
 
-For proto message type which will be returned, please see: [Metadata](https://github.com/z5labs/griot/blob/main/services/content/content.proto#L16)
+For proto message type which will be returned, please see: [Metadata](https://github.com/z5labs/griot/blob/main/services/content/contentpb/metadata.proto)
 
 ### Form Field: content
 
@@ -66,7 +66,7 @@ For proto message type which will be returned, please see: [Metadata](https://gi
 
 ### HTTP 200
 
-For proto message type which will be returned, please see: [UploadContentV1Response](https://github.com/z5labs/griot/blob/main/services/content/content.proto#L21)
+For proto message type which will be returned, please see: [UploadContentV1Response](https://github.com/z5labs/griot/blob/main/services/content/contentpb/upload_content_v1_response.proto)
 
 ### HTTP 400
 
