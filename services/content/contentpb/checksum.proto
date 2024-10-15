@@ -1,0 +1,12 @@
+edition = "2023";
+
+package griot.content;
+
+option go_package = "github.com/z5labs/griot/services/content/contentpb;contentpb";
+
+import "hash_func.proto";
+
+message Checksum {
+    HashFunc hash_func = 1;
+    bytes hash = 2;
+}

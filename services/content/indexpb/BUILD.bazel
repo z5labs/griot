@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "indexpb",
+    srcs = [
+        "content_size.pb.go",
+        "index_record.pb.go",
+        "media_type.pb.go",
+        "unit_of_information.pb.go",
+    ],
+    importpath = "github.com/z5labs/griot/services/content/indexpb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//services/content/contentpb",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//runtime/protoimpl",
+    ],
+)
