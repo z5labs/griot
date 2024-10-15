@@ -1,0 +1,10 @@
+edition = "2023";
+
+package griot.content.index;
+
+option go_package = "github.com/z5labs/griot/services/content/indexpb;indexpb";
+
+enum UnitOfInformation {
+    BIT = 0;
+    BYTE = 1;
+}
