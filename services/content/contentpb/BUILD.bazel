@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "contentpb",
+    srcs = [
+        "checksum.pb.go",
+        "hash_func.pb.go",
+        "metadata.pb.go",
+        "upload_content_v1_response.pb.go",
+    ],
+    importpath = "github.com/z5labs/griot/services/content/contentpb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//runtime/protoimpl",
+    ],
+)

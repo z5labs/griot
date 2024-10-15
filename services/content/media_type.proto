@@ -1,0 +1,12 @@
+edition = "2023";
+
+package griot.content.index;
+
+option go_package = "github.com/z5labs/griot/services/content/indexpb;indexpb";
+
+message MediaType {
+    string type = 1;
+    string subtype = 2;
+    string suffix = 3;
+    map<string, string> parameters = 4;
+}

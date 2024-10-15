@@ -1,0 +1,16 @@
+edition = "2023";
+
+package griot.content.index;
+
+option go_package = "github.com/z5labs/griot/services/content/indexpb;indexpb";
+
+import "media_type.proto";
+import "checksum.proto";
+
+message Record {
+    string content_id = 1;
+    MediaType content_type = 2;
+    string content_name = 3;
+
+    repeated griot.content.Checksum check_sums = 4;
+}
