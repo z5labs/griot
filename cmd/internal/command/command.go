@@ -16,13 +16,21 @@ package command
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var DefaultMinLogLevel LogLevel
@@ -59,6 +67,11 @@ func Logger(cfg LoggingConfig) *slog.Logger {
 	))
 }
 
+type OTelConfig struct {
+	Enabled          bool   `flag:"enable-otel"`
+	TraceDestination string `flag:"trace-out"`
+}
+
 type Option func(*cobra.Command)
 
 func Short(desription string) Option {
@@ -91,33 +104,123 @@ type Handler interface {
 
 func Handle[T any](f func(context.Context, T) (Handler, error)) Option {
 	return func(c *cobra.Command) {
+		var postRunHooks []func(context.Context) error
+
+		c.PreRunE = func(cmd *cobra.Command, args []string) error {
+			var cfg OTelConfig
+			err := decodeFlags(cmd.Flags(), &cfg)
+			if err != nil {
+				return err
+			}
+
+			if !cfg.Enabled {
+				return nil
+			}
+
+			otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+				propagation.Baggage{},
+				propagation.TraceContext{},
+			))
+
+			out, err := openDestination(cfg.TraceDestination)
+			if err != nil {
+				return err
+			}
+
+			tp, err := initTracerProvider(cmd.Context(), out)
+			if err != nil {
+				return err
+			}
+
+			otel.SetTracerProvider(tp)
+			postRunHooks = append(postRunHooks, tp.Shutdown)
+			return nil
+		}
+
 		c.RunE = func(cmd *cobra.Command, args []string) error {
-			m := make(map[string]any)
-			cmd.Flags().VisitAll(func(f *pflag.Flag) {
-				m[f.Name] = f.Value
-			})
+			spanCtx, span := otel.Tracer("command").Start(cmd.Context(), "cobra.Command.RunE")
+			defer span.End()
 
 			var cfg T
-			dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-				Result:  &cfg,
-				TagName: "flag",
-			})
+			err := decodeFlags(cmd.Flags(), &cfg)
 			if err != nil {
 				return err
 			}
 
-			err = dec.Decode(m)
+			h, err := f(spanCtx, cfg)
 			if err != nil {
 				return err
 			}
+			return h.Handle(spanCtx)
+		}
 
-			h, err := f(cmd.Context(), cfg)
-			if err != nil {
-				return err
+		c.PostRunE = func(cmd *cobra.Command, args []string) error {
+			var errs []error
+			for _, hook := range postRunHooks {
+				err := hook(cmd.Context())
+				if err == nil {
+					continue
+				}
+				errs = append(errs, err)
 			}
-			return h.Handle(cmd.Context())
+			if len(errs) == 0 {
+				return nil
+			}
+			if len(errs) == 1 {
+				return errs[0]
+			}
+			return errors.Join(errs...)
 		}
 	}
+}
+
+func decodeFlags(fs *pflag.FlagSet, v interface{}) error {
+	m := make(map[string]any)
+	fs.VisitAll(func(f *pflag.Flag) {
+		m[f.Name] = f.Value
+	})
+
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Result:  v,
+		TagName: "flag",
+	})
+	if err != nil {
+		return err
+	}
+	return dec.Decode(m)
+}
+
+func openDestination(filename string) (*os.File, error) {
+	filename = strings.TrimSpace(filename)
+	if len(filename) > 0 {
+		return os.Create(filename)
+	}
+	return os.CreateTemp("", "griot_traces_*")
+}
+
+func initTracerProvider(ctx context.Context, out io.Writer) (*sdktrace.TracerProvider, error) {
+	rsc, err := resource.Detect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	exp, err := stdouttrace.New(
+		stdouttrace.WithWriter(out),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sp := sdktrace.NewSimpleSpanProcessor(
+		exp,
+	)
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(rsc),
+		sdktrace.WithSpanProcessor(sp),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
+	return tp, nil
 }
 
 func New(use string, opts ...Option) *cobra.Command {
@@ -138,4 +241,9 @@ func Run(c *cobra.Command) {
 	if err == nil {
 		return
 	}
+
+	log := Logger(LoggingConfig{
+		Level: &DefaultMinLogLevel,
+	})
+	log.Error("encountered unexpected error", slog.String("error", err.Error()))
 }
