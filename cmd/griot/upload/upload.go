@@ -74,6 +74,11 @@ type handler struct {
 }
 
 func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error) {
+	spanCtx, span := otel.Tracer("upload").Start(ctx, "initUploadHandler")
+	defer span.End()
+
+	log := command.Logger(cfg.LoggingConfig)
+
 	var hasher hash.Hash
 	switch cfg.HashFunc {
 	case "sha256":
@@ -84,11 +89,12 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 
 	src, err := openSourceFile(cfg.SourceFile)
 	if err != nil {
+		log.ErrorContext(spanCtx, "failed to open source file", slog.String("error", err.Error()))
 		return nil, err
 	}
 
 	h := &handler{
-		log:         command.Logger(cfg.LoggingConfig),
+		log:         log,
 		contentName: cfg.Name,
 		mediaType:   cfg.MediaType,
 		hasher:      hasher,

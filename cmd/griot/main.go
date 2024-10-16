@@ -25,6 +25,9 @@ func main() {
 		"griot",
 		command.PersistentFlags(func(fs *pflag.FlagSet) {
 			fs.Var(&command.DefaultMinLogLevel, "log-level", "Set the minimum log level.")
+
+			fs.Bool("enable-otel", false, "Enable OpenTelemetry tracing.")
+			fs.String("trace-out", "", "Specify output file for OpenTelemetry trace data. If not set, a temp file will be created and used.")
 		}),
 		command.Sub(upload.New()),
 	)
