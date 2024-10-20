@@ -32,7 +32,8 @@ func NewClient() *Client {
 }
 
 type UploadContentRequest struct {
-	Metadata *contentpb.Metadata
+	Name     string
+	HashFunc contentpb.HashFunc
 	Body     io.Reader
 }
 
