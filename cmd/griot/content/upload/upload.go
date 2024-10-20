@@ -22,7 +22,9 @@ import (
 	"hash"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/z5labs/griot/cmd/internal/command"
@@ -42,7 +44,14 @@ func New() *cobra.Command {
 			fs.String("name", "", "Provide an optional name to help identify this content later.")
 			fs.String("media-type", "", "Specify the content Media Type.")
 			fs.String("source-file", "", "Specify the content source file.")
-			fs.String("hash-func", "sha256", "Specify hash function used for calculating content checksum.")
+			fs.String(
+				"hash-func",
+				contentpb.HashFunc_SHA256.String(),
+				fmt.Sprintf(
+					"Specify hash function used for calculating content checksum. (values %s)",
+					strings.Join(slices.Collect(maps.Values(contentpb.HashFunc_name)), ","),
+				),
+			)
 		}),
 		command.Handle(initUploadHandler),
 	)
@@ -122,14 +131,9 @@ func (h *handler) Handle(ctx context.Context) error {
 	}
 
 	req := &content.UploadContentRequest{
-		Metadata: &contentpb.Metadata{
-			Name: &h.contentName,
-			Checksum: &contentpb.Checksum{
-				HashFunc: contentpb.HashFunc_SHA256.Enum(),
-				Hash:     h.hasher.Sum(nil),
-			},
-		},
-		Body: h.src,
+		Name:     h.contentName,
+		HashFunc: contentpb.HashFunc_SHA256,
+		Body:     h.src,
 	}
 	resp, err := h.content.UploadContent(spanCtx, req)
 	if err != nil {
