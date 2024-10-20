@@ -12,25 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package content
 
 import (
-	"github.com/spf13/pflag"
-	"github.com/z5labs/griot/cmd/griot/content"
+	"github.com/z5labs/griot/cmd/griot/content/upload"
 	"github.com/z5labs/griot/cmd/internal/command"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	cmd := command.New(
-		"griot",
-		command.PersistentFlags(func(fs *pflag.FlagSet) {
-			fs.Var(&command.DefaultMinLogLevel, "log-level", "Set the minimum log level.")
-
-			fs.Bool("enable-otel", false, "Enable OpenTelemetry tracing.")
-			fs.String("trace-out", "", "Specify output file for OpenTelemetry trace data. If not set, a temp file will be created and used.")
-		}),
-		command.Sub(content.New()),
+func New() *cobra.Command {
+	return command.New(
+		"content",
+		command.Short("Manage content"),
+		command.Sub(upload.New()),
 	)
-
-	command.Run(cmd)
 }
