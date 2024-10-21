@@ -18,11 +18,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"log/slog"
 	"maps"
+	"mime"
 	"os"
 	"slices"
 	"strings"
@@ -30,23 +32,44 @@ import (
 	"github.com/z5labs/griot/cmd/internal/command"
 	"github.com/z5labs/griot/services/content"
 	"github.com/z5labs/griot/services/content/contentpb"
+	"github.com/z5labs/humus"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/otel"
 )
 
-func New() *cobra.Command {
-	return command.New(
+type hashFuncFlag contentpb.HashFunc
+
+func (x *hashFuncFlag) Set(v string) error {
+	h, exists := contentpb.HashFunc_value[v]
+	if !exists {
+		return fmt.Errorf("unknown value for contentpb.HashFunc: %s", v)
+	}
+	*x = hashFuncFlag(h)
+	return nil
+}
+
+func (x hashFuncFlag) String() string {
+	return contentpb.HashFunc(x).String()
+}
+
+func (hashFuncFlag) Type() string {
+	return "contentpb.HashFunc"
+}
+
+func New() *command.App {
+	defaultHashFunc := hashFuncFlag(contentpb.HashFunc_SHA256)
+
+	return command.NewApp(
 		"upload",
 		command.Short("Upload content"),
 		command.Flags(func(fs *pflag.FlagSet) {
 			fs.String("name", "", "Provide an optional name to help identify this content later.")
 			fs.String("media-type", "", "Specify the content Media Type.")
 			fs.String("source-file", "", "Specify the content source file.")
-			fs.String(
+			fs.Var(
+				&defaultHashFunc,
 				"hash-func",
-				contentpb.HashFunc_SHA256.String(),
 				fmt.Sprintf(
 					"Specify hash function used for calculating content checksum. (values %s)",
 					strings.Join(slices.Collect(maps.Values(contentpb.HashFunc_name)), ","),
@@ -58,12 +81,46 @@ func New() *cobra.Command {
 }
 
 type config struct {
-	command.LoggingConfig `flag:",squash"`
+	Name       string             `flag:"name"`
+	MediaType  string             `flag:"media-type"`
+	SourceFile string             `flag:"source-file"`
+	HashFunc   contentpb.HashFunc `flag:"hash-func"`
+}
 
-	Name       string `flag:"name"`
-	MediaType  string `flag:"media-type"`
-	SourceFile string `flag:"source-file"`
-	HashFunc   string `flag:"hash-func"`
+func (c config) Validate(ctx context.Context) error {
+	validators := []command.Validator{
+		validateMediaType(c.MediaType),
+		validateSourceFile(c.SourceFile),
+	}
+
+	return command.ValidateAll(ctx, validators...)
+}
+
+func validateMediaType(mediaType string) command.ValidatorFunc {
+	return func(ctx context.Context) error {
+		if len(mediaType) == 0 {
+			return errors.New("media type must be provided")
+		}
+		_, _, err := mime.ParseMediaType(mediaType)
+		return err
+	}
+}
+
+func validateSourceFile(filename string) command.ValidatorFunc {
+	return func(ctx context.Context) error {
+		if len(filename) == 0 {
+			return errors.New("source file name must be provided")
+		}
+
+		info, err := os.Stat(filename)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return errors.New("source file name must be a file and not a directory")
+		}
+		return nil
+	}
 }
 
 type uploadClient interface {
@@ -86,17 +143,17 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 	spanCtx, span := otel.Tracer("upload").Start(ctx, "initUploadHandler")
 	defer span.End()
 
-	log := command.Logger(cfg.LoggingConfig)
+	log := humus.Logger("upload")
 
 	var hasher hash.Hash
 	switch cfg.HashFunc {
-	case "sha256":
+	case contentpb.HashFunc_SHA256:
 		hasher = sha256.New()
 	default:
 		return nil, fmt.Errorf("unsupported hash function: %s", cfg.HashFunc)
 	}
 
-	src, err := openSourceFile(cfg.SourceFile)
+	src, err := os.Open(cfg.SourceFile)
 	if err != nil {
 		log.ErrorContext(spanCtx, "failed to open source file", slog.String("error", err.Error()))
 		return nil, err
@@ -143,12 +200,4 @@ func (h *handler) Handle(ctx context.Context) error {
 
 	enc := json.NewEncoder(h.out)
 	return enc.Encode(resp)
-}
-
-func openSourceFile(filename string) (*os.File, error) {
-	filename = strings.TrimSpace(filename)
-	if len(filename) == 0 {
-		return os.Stdin, nil
-	}
-	return os.Open(filename)
 }
