@@ -18,131 +18,85 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
-	"os"
-	"os/signal"
-	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/z5labs/humus"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var DefaultMinLogLevel LogLevel
-
-func init() {
-	DefaultMinLogLevel.Set(slog.LevelWarn.String())
-}
-
-type LogLevel slog.LevelVar
-
-func (l *LogLevel) Set(v string) error {
-	return (*slog.LevelVar)(l).UnmarshalText([]byte(v))
-}
-
-func (l *LogLevel) String() string {
-	return (*slog.LevelVar)(l).Level().String()
-}
-
-func (l *LogLevel) Type() string {
-	return "slog.Level"
-}
-
-type LoggingConfig struct {
-	Level *LogLevel `flag:"log-level"`
-}
-
-func Logger(cfg LoggingConfig) *slog.Logger {
-	return slog.New(slog.NewJSONHandler(
-		os.Stderr,
-		&slog.HandlerOptions{
-			AddSource: true,
-			Level:     (*slog.LevelVar)(cfg.Level).Level(),
-		},
-	))
-}
-
-type OTelConfig struct {
-	Enabled          bool   `flag:"enable-otel"`
-	TraceDestination string `flag:"trace-out"`
-}
-
-type Option func(*cobra.Command)
+type Option func(*App)
 
 func Short(desription string) Option {
-	return func(c *cobra.Command) {
-		c.Short = desription
+	return func(a *App) {
+		a.cmd.Short = desription
 	}
 }
 
 func Flags(f func(*pflag.FlagSet)) Option {
-	return func(c *cobra.Command) {
-		f(c.Flags())
+	return func(a *App) {
+		f(a.cmd.Flags())
 	}
 }
 
 func PersistentFlags(f func(*pflag.FlagSet)) Option {
-	return func(c *cobra.Command) {
-		f(c.PersistentFlags())
+	return func(a *App) {
+		f(a.cmd.PersistentFlags())
 	}
 }
 
-func Sub(sub *cobra.Command) Option {
-	return func(c *cobra.Command) {
-		c.AddCommand(sub)
+func Sub(sub *App) Option {
+	return func(a *App) {
+		a.cmd.AddCommand(sub.cmd)
 	}
+}
+
+type Validator interface {
+	Validate(context.Context) error
+}
+
+type ValidatorFunc func(context.Context) error
+
+func (f ValidatorFunc) Validate(ctx context.Context) error {
+	return f(ctx)
+}
+
+func ValidateAll(ctx context.Context, vs ...Validator) error {
+	errs := make([]error, 0, len(vs))
+	for _, v := range vs {
+		err := v.Validate(ctx)
+		if err == nil {
+			continue
+		}
+		errs = append(errs, err)
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	if len(errs) == 1 {
+		return errs[0]
+	}
+	return errors.Join(errs...)
 }
 
 type Handler interface {
 	Handle(context.Context) error
 }
 
-func Handle[T any](f func(context.Context, T) (Handler, error)) Option {
-	return func(c *cobra.Command) {
-		var postRunHooks []func(context.Context) error
-
-		c.PreRunE = func(cmd *cobra.Command, args []string) error {
-			var cfg OTelConfig
-			err := decodeFlags(cmd.Flags(), &cfg)
-			if err != nil {
-				return err
-			}
-
-			if !cfg.Enabled {
-				return nil
-			}
-
-			otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-				propagation.Baggage{},
-				propagation.TraceContext{},
-			))
-
-			out, err := openDestination(cfg.TraceDestination)
-			if err != nil {
-				return err
-			}
-
-			tp, err := initTracerProvider(cmd.Context(), out)
-			if err != nil {
-				return err
-			}
-
-			otel.SetTracerProvider(tp)
-			postRunHooks = append(postRunHooks, tp.Shutdown)
-			return nil
-		}
-
-		c.RunE = func(cmd *cobra.Command, args []string) error {
+func Handle[T Validator](f func(context.Context, T) (Handler, error)) Option {
+	return func(a *App) {
+		a.cmd.RunE = func(cmd *cobra.Command, args []string) error {
 			spanCtx, span := otel.Tracer("command").Start(cmd.Context(), "cobra.Command.RunE")
 			defer span.End()
 
 			var cfg T
 			err := decodeFlags(cmd.Flags(), &cfg)
+			if err != nil {
+				return err
+			}
+
+			err = cfg.Validate(spanCtx)
 			if err != nil {
 				return err
 			}
@@ -153,25 +107,37 @@ func Handle[T any](f func(context.Context, T) (Handler, error)) Option {
 			}
 			return h.Handle(spanCtx)
 		}
-
-		c.PostRunE = func(cmd *cobra.Command, args []string) error {
-			var errs []error
-			for _, hook := range postRunHooks {
-				err := hook(cmd.Context())
-				if err == nil {
-					continue
-				}
-				errs = append(errs, err)
-			}
-			if len(errs) == 0 {
-				return nil
-			}
-			if len(errs) == 1 {
-				return errs[0]
-			}
-			return errors.Join(errs...)
-		}
 	}
+}
+
+type App struct {
+	cmd *cobra.Command
+}
+
+func NewApp(name string, opts ...Option) *App {
+	a := &App{
+		cmd: &cobra.Command{
+			Use: name,
+		},
+	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
+}
+
+func Run[T any](r io.Reader, f func(context.Context, T) (*App, error)) {
+	humus.Run(r, func(ctx context.Context, cfg T) (humus.App, error) {
+		app, err := f(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+		return app, nil
+	})
+}
+
+func (a *App) Run(ctx context.Context) error {
+	return a.cmd.ExecuteContext(ctx)
 }
 
 func decodeFlags(fs *pflag.FlagSet, v interface{}) error {
@@ -188,62 +154,4 @@ func decodeFlags(fs *pflag.FlagSet, v interface{}) error {
 		return err
 	}
 	return dec.Decode(m)
-}
-
-func openDestination(filename string) (*os.File, error) {
-	filename = strings.TrimSpace(filename)
-	if len(filename) > 0 {
-		return os.Create(filename)
-	}
-	return os.CreateTemp("", "griot_traces_*")
-}
-
-func initTracerProvider(ctx context.Context, out io.Writer) (*sdktrace.TracerProvider, error) {
-	rsc, err := resource.Detect(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	exp, err := stdouttrace.New(
-		stdouttrace.WithWriter(out),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	sp := sdktrace.NewSimpleSpanProcessor(
-		exp,
-	)
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithResource(rsc),
-		sdktrace.WithSpanProcessor(sp),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-	)
-	return tp, nil
-}
-
-func New(use string, opts ...Option) *cobra.Command {
-	cmd := &cobra.Command{
-		Use: use,
-	}
-	for _, opt := range opts {
-		opt(cmd)
-	}
-	return cmd
-}
-
-func Run(c *cobra.Command) {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	defer cancel()
-
-	err := c.ExecuteContext(ctx)
-	if err == nil {
-		return
-	}
-
-	log := Logger(LoggingConfig{
-		Level: &DefaultMinLogLevel,
-	})
-	log.Error("encountered unexpected error", slog.String("error", err.Error()))
 }
