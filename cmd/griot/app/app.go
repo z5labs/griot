@@ -12,19 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package app
 
 import (
-	"bytes"
-	_ "embed"
+	"context"
 
-	"github.com/z5labs/griot/cmd/griot/app"
+	"github.com/z5labs/griot/cmd/griot/content"
 	"github.com/z5labs/griot/cmd/internal/command"
 )
 
-//go:embed config.yaml
-var configBytes []byte
+type Config struct{}
 
-func main() {
-	command.Run(bytes.NewReader(configBytes), app.Init)
+func Init(ctx context.Context, cfg Config) (*command.App, error) {
+	app := command.NewApp(
+		"griot",
+		command.Sub(content.New()),
+	)
+	return app, nil
 }

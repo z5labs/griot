@@ -17,12 +17,10 @@ package content
 import (
 	"github.com/z5labs/griot/cmd/griot/content/upload"
 	"github.com/z5labs/griot/cmd/internal/command"
-
-	"github.com/spf13/cobra"
 )
 
-func New() *cobra.Command {
-	return command.New(
+func New() *command.App {
+	return command.NewApp(
 		"content",
 		command.Short("Manage content"),
 		command.Sub(upload.New()),
