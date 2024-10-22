@@ -7,6 +7,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
+	github.com/z5labs/bedrock v0.12.0
 	github.com/z5labs/humus v0.2.0
 	go.opentelemetry.io/otel v1.31.0
 	google.golang.org/protobuf v1.35.1
@@ -21,7 +22,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/z5labs/bedrock v0.12.0 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.5.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.6.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.30.0 // indirect

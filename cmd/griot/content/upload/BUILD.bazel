@@ -21,6 +21,9 @@ go_test(
     embed = [":upload"],
     deps = [
         "//cmd/internal/command",
+        "//services/content",
+        "//services/content/contentpb",
         "@com_github_stretchr_testify//assert",
+        "@com_github_z5labs_bedrock//pkg/noop",
     ],
 )

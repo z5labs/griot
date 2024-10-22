@@ -23,6 +23,7 @@ use_repo(
     "com_github_z5labs_humus",
     "io_opentelemetry_go_otel",
     "org_golang_google_protobuf",
+    "com_github_z5labs_bedrock",
 )
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")

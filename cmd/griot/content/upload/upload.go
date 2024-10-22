@@ -155,12 +155,26 @@ type uploadClient interface {
 	UploadContent(context.Context, *content.UploadContentRequest) (*content.UploadContentResponse, error)
 }
 
+type hasher interface {
+	hash.Hash
+
+	HashFunc() contentpb.HashFunc
+}
+
+type sha256Hasher struct {
+	hash.Hash
+}
+
+func (sha256Hasher) HashFunc() contentpb.HashFunc {
+	return contentpb.HashFunc_SHA256
+}
+
 type handler struct {
 	log *slog.Logger
 
 	contentName string
 	mediaType   string
-	hasher      hash.Hash
+	hasher      hasher
 	src         io.ReadSeeker
 	out         io.Writer
 
@@ -173,15 +187,17 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 
 	log := humus.Logger("upload")
 
-	var hasher hash.Hash
 	hashFunc, exists := contentpb.HashFunc_value[cfg.HashFunc]
 	if !exists {
-		return nil, fmt.Errorf("unknown hash function: %s", cfg.HashFunc)
+		return nil, UnknownHashFuncError{
+			Value: cfg.HashFunc,
+		}
 	}
 
+	var contentHasher hasher
 	switch contentpb.HashFunc(hashFunc) {
 	case contentpb.HashFunc_SHA256:
-		hasher = sha256.New()
+		contentHasher = sha256Hasher{Hash: sha256.New()}
 	default:
 		return nil, fmt.Errorf("unsupported hash function: %s", cfg.HashFunc)
 	}
@@ -196,7 +212,7 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 		log:         log,
 		contentName: cfg.Name,
 		mediaType:   cfg.MediaType,
-		hasher:      hasher,
+		hasher:      contentHasher,
 		src:         src,
 		out:         os.Stdout,
 		content:     content.NewClient(),
@@ -204,25 +220,46 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 	return h, nil
 }
 
+type FailedToSeekReadBytesError struct {
+	BytesRead   int64
+	BytesSeeked int64
+}
+
+func (e FailedToSeekReadBytesError) Error() string {
+	return fmt.Sprintf("bytes read do not match bytes seeked: %d:%d", e.BytesRead, e.BytesSeeked)
+}
+
 func (h *handler) Handle(ctx context.Context) error {
 	spanCtx, span := otel.Tracer("upload").Start(ctx, "handler.Handle")
 	defer span.End()
 
-	_, err := io.Copy(h.hasher, h.src)
+	bytesRead, err := io.Copy(h.hasher, h.src)
 	if err != nil {
+		span.RecordError(err)
 		h.log.ErrorContext(spanCtx, "failed to compute hash", slog.String("error", err.Error()))
 		return err
 	}
 
-	_, err = h.src.Seek(0, 0)
+	bytesSeeked, err := h.src.Seek(0, 0)
 	if err != nil {
-		h.log.ErrorContext(spanCtx, "failed to seek to start of content source", slog.String("error", err.Error()))
+		span.RecordError(err)
+		h.log.ErrorContext(spanCtx, "failed to perform seek on the source file", slog.String("error", err.Error()))
+		return err
+	}
+	if bytesRead != bytesSeeked {
+		err = FailedToSeekReadBytesError{
+			BytesRead:   bytesRead,
+			BytesSeeked: bytesSeeked,
+		}
+
+		span.RecordError(err)
+		h.log.ErrorContext(spanCtx, "failed to seek to the start of the source file", slog.String("error", err.Error()))
 		return err
 	}
 
 	req := &content.UploadContentRequest{
 		Name:     h.contentName,
-		HashFunc: contentpb.HashFunc_SHA256,
+		HashFunc: h.hasher.HashFunc(),
 		Body:     h.src,
 	}
 	resp, err := h.content.UploadContent(spanCtx, req)
