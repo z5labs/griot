@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "content",
+    srcs = ["content.go"],
+    importpath = "github.com/z5labs/griot/services/content",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//services/content/contentpb",
+        "@io_opentelemetry_go_otel//:otel",
+    ],
+)

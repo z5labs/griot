@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "griot_lib",
+    srcs = ["main.go"],
+    embedsrcs = ["config.yaml"],
+    importpath = "github.com/z5labs/griot/cmd/griot",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cmd/griot/app",
+        "//cmd/internal/command",
+    ],
+)
+
+go_binary(
+    name = "griot",
+    embed = [":griot_lib"],
+    visibility = ["//visibility:public"],
+)
