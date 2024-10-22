@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -32,44 +31,24 @@ import (
 	"github.com/z5labs/griot/cmd/internal/command"
 	"github.com/z5labs/griot/services/content"
 	"github.com/z5labs/griot/services/content/contentpb"
-	"github.com/z5labs/humus"
 
 	"github.com/spf13/pflag"
+	"github.com/z5labs/humus"
 	"go.opentelemetry.io/otel"
 )
 
-type hashFuncFlag contentpb.HashFunc
-
-func (x *hashFuncFlag) Set(v string) error {
-	h, exists := contentpb.HashFunc_value[v]
-	if !exists {
-		return fmt.Errorf("unknown value for contentpb.HashFunc: %s", v)
-	}
-	*x = hashFuncFlag(h)
-	return nil
-}
-
-func (x hashFuncFlag) String() string {
-	return contentpb.HashFunc(x).String()
-}
-
-func (hashFuncFlag) Type() string {
-	return "contentpb.HashFunc"
-}
-
-func New() *command.App {
-	defaultHashFunc := hashFuncFlag(contentpb.HashFunc_SHA256)
-
+func New(args ...string) *command.App {
 	return command.NewApp(
 		"upload",
+		command.Args(args...),
 		command.Short("Upload content"),
 		command.Flags(func(fs *pflag.FlagSet) {
 			fs.String("name", "", "Provide an optional name to help identify this content later.")
 			fs.String("media-type", "", "Specify the content Media Type.")
 			fs.String("source-file", "", "Specify the content source file.")
-			fs.Var(
-				&defaultHashFunc,
+			fs.String(
 				"hash-func",
+				contentpb.HashFunc_SHA256.String(),
 				fmt.Sprintf(
 					"Specify hash function used for calculating content checksum. (values %s)",
 					strings.Join(slices.Collect(maps.Values(contentpb.HashFunc_name)), ","),
@@ -81,16 +60,17 @@ func New() *command.App {
 }
 
 type config struct {
-	Name       string             `flag:"name"`
-	MediaType  string             `flag:"media-type"`
-	SourceFile string             `flag:"source-file"`
-	HashFunc   contentpb.HashFunc `flag:"hash-func"`
+	Name       string `flag:"name"`
+	MediaType  string `flag:"media-type"`
+	SourceFile string `flag:"source-file"`
+	HashFunc   string `flag:"hash-func"`
 }
 
 func (c config) Validate(ctx context.Context) error {
 	validators := []command.Validator{
 		validateMediaType(c.MediaType),
 		validateSourceFile(c.SourceFile),
+		validateHashFunc(c.HashFunc),
 	}
 
 	return command.ValidateAll(ctx, validators...)
@@ -99,25 +79,73 @@ func (c config) Validate(ctx context.Context) error {
 func validateMediaType(mediaType string) command.ValidatorFunc {
 	return func(ctx context.Context) error {
 		if len(mediaType) == 0 {
-			return errors.New("media type must be provided")
+			return command.InvalidFlagError{
+				Name:  "media-type",
+				Cause: command.ErrFlagRequired,
+			}
 		}
 		_, _, err := mime.ParseMediaType(mediaType)
-		return err
+		if err != nil {
+			return command.InvalidFlagError{
+				Name:  "media-type",
+				Cause: err,
+			}
+		}
+		return nil
 	}
 }
 
 func validateSourceFile(filename string) command.ValidatorFunc {
 	return func(ctx context.Context) error {
 		if len(filename) == 0 {
-			return errors.New("source file name must be provided")
+			return command.InvalidFlagError{
+				Name:  "source-file",
+				Cause: command.ErrFlagRequired,
+			}
 		}
 
 		info, err := os.Stat(filename)
 		if err != nil {
-			return err
+			return command.InvalidFlagError{
+				Name:  "source-file",
+				Cause: err,
+			}
 		}
 		if info.IsDir() {
-			return errors.New("source file name must be a file and not a directory")
+			return command.InvalidFlagError{
+				Name:  "source-file",
+				Cause: command.ErrMustBeAFile,
+			}
+		}
+		return nil
+	}
+}
+
+type UnknownHashFuncError struct {
+	Value string
+}
+
+func (e UnknownHashFuncError) Error() string {
+	return fmt.Sprintf("unknown hash func value: %s", e.Value)
+}
+
+func validateHashFunc(name string) command.ValidatorFunc {
+	return func(ctx context.Context) error {
+		if len(name) == 0 {
+			return command.InvalidFlagError{
+				Name:  "hash-func",
+				Cause: command.ErrFlagRequired,
+			}
+		}
+
+		_, found := contentpb.HashFunc_value[name]
+		if !found {
+			return command.InvalidFlagError{
+				Name: "hash-func",
+				Cause: UnknownHashFuncError{
+					Value: name,
+				},
+			}
 		}
 		return nil
 	}
@@ -146,7 +174,12 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 	log := humus.Logger("upload")
 
 	var hasher hash.Hash
-	switch cfg.HashFunc {
+	hashFunc, exists := contentpb.HashFunc_value[cfg.HashFunc]
+	if !exists {
+		return nil, fmt.Errorf("unknown hash function: %s", cfg.HashFunc)
+	}
+
+	switch contentpb.HashFunc(hashFunc) {
 	case contentpb.HashFunc_SHA256:
 		hasher = sha256.New()
 	default:

@@ -28,6 +28,12 @@ import (
 
 type Option func(*App)
 
+func Args(args ...string) Option {
+	return func(a *App) {
+		a.cmd.SetArgs(args)
+	}
+}
+
 func Short(desription string) Option {
 	return func(a *App) {
 		a.cmd.Short = desription
@@ -117,7 +123,9 @@ type App struct {
 func NewApp(name string, opts ...Option) *App {
 	a := &App{
 		cmd: &cobra.Command{
-			Use: name,
+			Use:           name,
+			SilenceErrors: true,
+			SilenceUsage:  true,
 		},
 	}
 	for _, opt := range opts {
