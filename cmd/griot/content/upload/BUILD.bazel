@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/z5labs/griot/cmd/griot/content/upload",
     visibility = ["//visibility:public"],
     deps = [
-        "//cmd/internal/command",
+        "//internal/command",
         "//services/content",
         "//services/content/contentpb",
         "@com_github_spf13_pflag//:pflag",
@@ -21,7 +21,7 @@ go_test(
     srcs = ["upload_test.go"],
     embed = [":upload"],
     deps = [
-        "//cmd/internal/command",
+        "//internal/command",
         "//services/content",
         "//services/content/contentpb",
         "@com_github_stretchr_testify//assert",

@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/z5labs/griot/cmd/griot/content"
-	"github.com/z5labs/griot/cmd/internal/command"
+	"github.com/z5labs/griot/internal/command"
 )
 
 type Config struct{}

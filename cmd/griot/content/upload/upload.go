@@ -29,7 +29,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/z5labs/griot/cmd/internal/command"
+	"github.com/z5labs/griot/internal/command"
 	"github.com/z5labs/griot/services/content"
 	"github.com/z5labs/griot/services/content/contentpb"
 

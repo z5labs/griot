@@ -19,7 +19,7 @@ import (
 	_ "embed"
 
 	"github.com/z5labs/griot/cmd/griot/app"
-	"github.com/z5labs/griot/cmd/internal/command"
+	"github.com/z5labs/griot/internal/command"
 )
 
 //go:embed config.yaml

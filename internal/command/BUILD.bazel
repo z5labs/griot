@@ -6,7 +6,7 @@ go_library(
         "command.go",
         "error.go",
     ],
-    importpath = "github.com/z5labs/griot/cmd/internal/command",
+    importpath = "github.com/z5labs/griot/internal/command",
     visibility = ["//cmd:__subpackages__"],
     deps = [
         "@com_github_go_viper_mapstructure_v2//:mapstructure",

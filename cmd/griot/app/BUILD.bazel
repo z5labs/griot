@@ -7,6 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/griot/content",
-        "//cmd/internal/command",
+        "//internal/command",
     ],
 )

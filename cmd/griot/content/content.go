@@ -16,7 +16,7 @@ package content
 
 import (
 	"github.com/z5labs/griot/cmd/griot/content/upload"
-	"github.com/z5labs/griot/cmd/internal/command"
+	"github.com/z5labs/griot/internal/command"
 )
 
 func New() *command.App {
