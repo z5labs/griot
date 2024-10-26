@@ -28,6 +28,7 @@ import (
 
 	"github.com/z5labs/griot/services/content/contentpb"
 
+	"github.com/z5labs/humus/humuspb"
 	"github.com/z5labs/humus/rest"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,24 +42,37 @@ type HttpClient interface {
 }
 
 type Client struct {
-	protoMarshal func(proto.Message) ([]byte, error)
-	http         HttpClient
+	host           string
+	protoMarshal   func(proto.Message) ([]byte, error)
+	http           HttpClient
+	protoUnmarshal func([]byte, proto.Message) error
 }
 
-func NewClient(hc HttpClient) *Client {
+func NewClient(hc HttpClient, host string) *Client {
 	c := &Client{
-		http: hc,
+		host:           host,
+		protoMarshal:   proto.Marshal,
+		http:           hc,
+		protoUnmarshal: proto.Unmarshal,
 	}
 	return c
 }
 
 type UploadContentRequest struct {
 	Metadata *contentpb.Metadata
-	Body     io.Reader
+	Content  io.Reader
 }
 
 type UploadContentResponse struct {
 	Id string `json:"id"`
+}
+
+type UnsupportedResponseContentTypeError struct {
+	ContentType string
+}
+
+func (e UnsupportedResponseContentTypeError) Error() string {
+	return fmt.Sprintf("received unsupported response content type: %s", e.ContentType)
 }
 
 func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (*UploadContentResponse, error) {
@@ -67,7 +81,7 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 
 	body, bodyWriter := io.Pipe()
 
-	respCh := make(chan *http.Response)
+	respCh := make(chan *http.Response, 1)
 	eg, egctx := errgroup.WithContext(spanCtx)
 	eg.Go(func() error {
 		defer bodyWriter.Close()
@@ -78,7 +92,7 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 		defer close(respCh)
 		defer body.Close()
 
-		r, err := http.NewRequestWithContext(egctx, http.MethodPost, "", body)
+		r, err := http.NewRequestWithContext(egctx, http.MethodPost, c.host+"/content/upload", body)
 		if err != nil {
 			return err
 		}
@@ -107,18 +121,31 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 		return nil, spanCtx.Err()
 	case resp = <-respCh:
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected http status code: %d", resp.StatusCode)
-	}
 	defer resp.Body.Close()
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != rest.ProtobufContentType {
+		return nil, UnsupportedResponseContentTypeError{
+			ContentType: contentType,
+		}
+	}
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var status humuspb.Status
+		err = c.protoUnmarshal(b, &status)
+		if err != nil {
+			return nil, err
+		}
+		return nil, &status
+	}
+
 	var uploadV1Resp contentpb.UploadContentV1Response
-	err = proto.Unmarshal(b, &uploadV1Resp)
+	err = c.protoUnmarshal(b, &uploadV1Resp)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +166,18 @@ func (c *Client) writeUploadRequest(ctx context.Context, w io.Writer, req *Uploa
 		return err
 	}
 
-	err = c.writeContent(spanCtx, pw, req.Metadata.Checksum.Hash, req.Body)
+	err = c.writeContent(spanCtx, pw, req.Metadata.Checksum.Hash, req.Content)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Client) writeMetadata(ctx context.Context, pw *multipart.Writer, meta *contentpb.Metadata) error {
+type partCreater interface {
+	CreatePart(textproto.MIMEHeader) (io.Writer, error)
+}
+
+func (c *Client) writeMetadata(ctx context.Context, creater partCreater, meta *contentpb.Metadata) error {
 	_, span := otel.Tracer("content").Start(ctx, "Client.writeMetadata")
 	defer span.End()
 
@@ -159,7 +190,7 @@ func (c *Client) writeMetadata(ctx context.Context, pw *multipart.Writer, meta *
 	header.Set("Content-Disposition", `form-data; name="metadata"`)
 	header.Set("Content-Type", rest.ProtobufContentType)
 
-	part, err := pw.CreatePart(header)
+	part, err := creater.CreatePart(header)
 	if err != nil {
 		return err
 	}
@@ -195,7 +226,7 @@ func (r *progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func (c *Client) writeContent(ctx context.Context, pw *multipart.Writer, hash []byte, r io.Reader) error {
+func (c *Client) writeContent(ctx context.Context, creater partCreater, hash []byte, r io.Reader) error {
 	spanCtx, span := otel.Tracer("content").Start(ctx, "Client.writeContent")
 	defer span.End()
 
@@ -216,7 +247,7 @@ func (c *Client) writeContent(ctx context.Context, pw *multipart.Writer, hash []
 	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="content"; filename=%q`, filename))
 	header.Set("Content-Type", "application/octet-stream")
 
-	part, err := pw.CreatePart(header)
+	part, err := creater.CreatePart(header)
 	if err != nil {
 		return err
 	}

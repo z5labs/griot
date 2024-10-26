@@ -1,17 +1,35 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "content",
-    srcs = ["content.go"],
+    srcs = ["client.go"],
     importpath = "github.com/z5labs/griot/services/content",
     visibility = ["//visibility:public"],
     deps = [
         "//services/content/contentpb",
+        "@com_github_z5labs_humus//humuspb",
         "@com_github_z5labs_humus//rest",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_golang_google_protobuf//proto",
         "@org_golang_x_sync//errgroup",
+    ],
+)
+
+go_test(
+    name = "content_test",
+    srcs = [
+        "client_example_test.go",
+        "client_test.go",
+    ],
+    embed = [":content"],
+    deps = [
+        "//internal/ptr",
+        "//services/content/contentpb",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_z5labs_humus//humuspb",
+        "@com_github_z5labs_humus//rest",
+        "@org_golang_google_protobuf//proto",
     ],
 )
