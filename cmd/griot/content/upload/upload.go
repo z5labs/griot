@@ -179,7 +179,7 @@ type handler struct {
 	contentName string
 	mediaType   string
 	hasher      hasher
-	src         io.ReadSeeker
+	src         io.ReadSeekCloser
 	out         io.Writer
 
 	content uploadClient
@@ -240,6 +240,7 @@ func (e FailedToSeekReadBytesError) Error() string {
 func (h *handler) Handle(ctx context.Context) error {
 	spanCtx, span := otel.Tracer("upload").Start(ctx, "handler.Handle")
 	defer span.End()
+	defer h.src.Close()
 
 	bytesRead, err := io.Copy(h.hasher, h.src)
 	if err != nil {

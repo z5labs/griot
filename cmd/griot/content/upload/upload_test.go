@@ -258,6 +258,14 @@ func (f seekNoopReader) Seek(offset int64, whence int) (int64, error) {
 	return f(offset, whence)
 }
 
+type readSeekerNopCloser struct {
+	io.ReadSeeker
+}
+
+func (readSeekerNopCloser) Close() error {
+	return nil
+}
+
 type uploadClientFunc func(context.Context, *content.UploadContentRequest) (*content.UploadContentResponse, error)
 
 func (f uploadClientFunc) UploadContent(ctx context.Context, req *content.UploadContentRequest) (*content.UploadContentResponse, error) {
@@ -275,7 +283,9 @@ func TestHandler_Handle(t *testing.T) {
 			h := &handler{
 				log:    slog.New(noop.LogHandler{}),
 				hasher: sha256Hasher{Hash: sha256.New()},
-				src:    src,
+				src: readSeekerNopCloser{
+					ReadSeeker: src,
+				},
 			}
 
 			err := h.Handle(context.Background())
@@ -293,7 +303,9 @@ func TestHandler_Handle(t *testing.T) {
 			h := &handler{
 				log:    slog.New(noop.LogHandler{}),
 				hasher: sha256Hasher{Hash: sha256.New()},
-				src:    src,
+				src: readSeekerNopCloser{
+					ReadSeeker: src,
+				},
 			}
 
 			err := h.Handle(context.Background())
@@ -311,7 +323,9 @@ func TestHandler_Handle(t *testing.T) {
 			h := &handler{
 				log:    slog.New(noop.LogHandler{}),
 				hasher: sha256Hasher{Hash: sha256.New()},
-				src:    src,
+				src: readSeekerNopCloser{
+					ReadSeeker: src,
+				},
 			}
 
 			err := h.Handle(context.Background())
@@ -340,9 +354,11 @@ func TestHandler_Handle(t *testing.T) {
 			})
 
 			h := &handler{
-				log:     slog.New(noop.LogHandler{}),
-				hasher:  sha256Hasher{Hash: sha256.New()},
-				src:     src,
+				log:    slog.New(noop.LogHandler{}),
+				hasher: sha256Hasher{Hash: sha256.New()},
+				src: readSeekerNopCloser{
+					ReadSeeker: src,
+				},
 				content: client,
 			}
 
