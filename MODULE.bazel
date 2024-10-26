@@ -20,10 +20,13 @@ use_repo(
     "com_github_spf13_cobra",
     "com_github_spf13_pflag",
     "com_github_stretchr_testify",
-    "com_github_z5labs_humus",
-    "io_opentelemetry_go_otel",
-    "org_golang_google_protobuf",
     "com_github_z5labs_bedrock",
+    "com_github_z5labs_humus",
+    "io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp",
+    "io_opentelemetry_go_otel",
+    "io_opentelemetry_go_otel_metric",
+    "org_golang_google_protobuf",
+    "org_golang_x_sync",
 )
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")

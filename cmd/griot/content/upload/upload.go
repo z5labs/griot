@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"maps"
 	"mime"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -34,6 +35,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/z5labs/humus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -208,6 +210,10 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 		return nil, err
 	}
 
+	hc := &http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
+
 	h := &handler{
 		log:         log,
 		contentName: cfg.Name,
@@ -215,7 +221,7 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 		hasher:      contentHasher,
 		src:         src,
 		out:         os.Stdout,
-		content:     content.NewClient(),
+		content:     content.NewClient(hc),
 	}
 	return h, nil
 }
@@ -257,10 +263,21 @@ func (h *handler) Handle(ctx context.Context) error {
 		return err
 	}
 
+	mediaType, params, _ := mime.ParseMediaType(h.mediaType)
+
 	req := &content.UploadContentRequest{
-		Name:     h.contentName,
-		HashFunc: h.hasher.HashFunc(),
-		Body:     h.src,
+		Metadata: &contentpb.Metadata{
+			Name: &h.contentName,
+			MediaType: &contentpb.MediaType{
+				Type:       &mediaType,
+				Parameters: params,
+			},
+			Checksum: &contentpb.Checksum{
+				HashFunc: h.hasher.HashFunc().Enum(),
+				Hash:     h.hasher.Sum(nil),
+			},
+		},
+		Body: h.src,
 	}
 	resp, err := h.content.UploadContent(spanCtx, req)
 	if err != nil {
