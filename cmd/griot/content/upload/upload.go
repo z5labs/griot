@@ -45,6 +45,7 @@ func New(args ...string) *command.App {
 		command.Args(args...),
 		command.Short("Upload content"),
 		command.Flags(func(fs *pflag.FlagSet) {
+			fs.String("content-host", "", "Specify the host for reaching griot.")
 			fs.String("name", "", "Provide an optional name to help identify this content later.")
 			fs.String("media-type", "", "Specify the content Media Type.")
 			fs.String("source-file", "", "Specify the content source file.")
@@ -62,6 +63,7 @@ func New(args ...string) *command.App {
 }
 
 type config struct {
+	Host       string `flag:"content-host"`
 	Name       string `flag:"name"`
 	MediaType  string `flag:"media-type"`
 	SourceFile string `flag:"source-file"`
@@ -221,7 +223,7 @@ func initUploadHandler(ctx context.Context, cfg config) (command.Handler, error)
 		hasher:      contentHasher,
 		src:         src,
 		out:         os.Stdout,
-		content:     content.NewClient(hc),
+		content:     content.NewClient(hc, cfg.Host),
 	}
 	return h, nil
 }
@@ -277,7 +279,7 @@ func (h *handler) Handle(ctx context.Context) error {
 				Hash:     h.hasher.Sum(nil),
 			},
 		},
-		Body: h.src,
+		Content: h.src,
 	}
 	resp, err := h.content.UploadContent(spanCtx, req)
 	if err != nil {
