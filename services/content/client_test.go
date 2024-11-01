@@ -223,7 +223,7 @@ func TestClient_UploadContent(t *testing.T) {
 				}
 
 				b, err := proto.Marshal(&humuspb.Status{
-					Code: humuspb.Code_INTERNAL,
+					Code: humuspb.Code_INTERNAL.Enum(),
 				})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -267,7 +267,7 @@ func TestClient_UploadContent(t *testing.T) {
 				}
 
 				b, err := proto.Marshal(&humuspb.Status{
-					Code: humuspb.Code_INTERNAL,
+					Code: humuspb.Code_INTERNAL.Enum(),
 				})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -296,7 +296,7 @@ func TestClient_UploadContent(t *testing.T) {
 			if !assert.ErrorAs(t, err, &status) {
 				return
 			}
-			if !assert.Equal(t, humuspb.Code_INTERNAL, status.Code) {
+			if !assert.Equal(t, humuspb.Code_INTERNAL, status.GetCode()) {
 				return
 			}
 		})
