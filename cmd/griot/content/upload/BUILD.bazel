@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "upload",
+    srcs = ["upload.go"],
+    importpath = "github.com/z5labs/griot/cmd/griot/content/upload",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/command",
+        "//services/content",
+        "//services/content/contentpb",
+        "@com_github_spf13_pflag//:pflag",
+        "@com_github_z5labs_humus//:humus",
+        "@io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp//:otelhttp",
+        "@io_opentelemetry_go_otel//:otel",
+    ],
+)
+
+go_test(
+    name = "upload_test",
+    srcs = ["upload_test.go"],
+    embed = [":upload"],
+    deps = [
+        "//internal/command",
+        "//services/content",
+        "//services/content/contentpb",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_z5labs_bedrock//pkg/noop",
+    ],
+)

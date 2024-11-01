@@ -11,7 +11,7 @@ import "content_size.proto";
 
 message Record {
     ContentId content_id = 1;
-    MediaType content_type = 2;
+    griot.content.MediaType content_type = 2;
     string content_name = 3;
     ContentSize content_size = 4;
 

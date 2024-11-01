@@ -6,6 +6,7 @@ go_library(
         "checksum.pb.go",
         "content_id.pb.go",
         "hash_func.pb.go",
+        "media_type.pb.go",
         "metadata.pb.go",
         "upload_content_v1_response.pb.go",
     ],
