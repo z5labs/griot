@@ -112,6 +112,7 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 
 	err := eg.Wait()
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -125,13 +126,16 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != rest.ProtobufContentType {
-		return nil, UnsupportedResponseContentTypeError{
+		err = UnsupportedResponseContentTypeError{
 			ContentType: contentType,
 		}
+		span.RecordError(err)
+		return nil, err
 	}
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -139,14 +143,18 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 		var status humuspb.Status
 		err = c.protoUnmarshal(b, &status)
 		if err != nil {
+			span.RecordError(err)
 			return nil, err
 		}
+
+		span.RecordError(&status)
 		return nil, &status
 	}
 
 	var uploadV1Resp contentpb.UploadContentV1Response
 	err = c.protoUnmarshal(b, &uploadV1Resp)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -183,6 +191,7 @@ func (c *Client) writeMetadata(ctx context.Context, creater partCreater, meta *c
 
 	b, err := c.protoMarshal(meta)
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 
@@ -192,16 +201,19 @@ func (c *Client) writeMetadata(ctx context.Context, creater partCreater, meta *c
 
 	part, err := creater.CreatePart(header)
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 
 	n, err := io.Copy(part, bytes.NewReader(b))
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 	if n != int64(len(b)) {
-		// TODO
-		return errors.New("did not write all metadata bytes")
+		err = errors.New("did not write all metadata bytes")
+		span.RecordError(err)
+		return err
 	}
 	return nil
 }
@@ -249,9 +261,14 @@ func (c *Client) writeContent(ctx context.Context, creater partCreater, hash []b
 
 	part, err := creater.CreatePart(header)
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 
 	_, err = io.Copy(part, pr)
-	return err
+	if err != nil {
+		span.RecordError(err)
+		return err
+	}
+	return nil
 }

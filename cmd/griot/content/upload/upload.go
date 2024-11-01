@@ -282,8 +282,10 @@ func (h *handler) Handle(ctx context.Context) error {
 		},
 		Content: h.src,
 	}
+
 	resp, err := h.content.UploadContent(spanCtx, req)
 	if err != nil {
+		span.RecordError(err)
 		h.log.ErrorContext(spanCtx, "failed to upload content", slog.String("error", err.Error()))
 		return err
 	}
