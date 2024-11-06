@@ -2,11 +2,16 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "content",
-    srcs = ["client.go"],
+    srcs = [
+        "app.go",
+        "client.go",
+    ],
+    embedsrcs = ["config.yaml"],
     importpath = "github.com/z5labs/griot/services/content",
     visibility = ["//visibility:public"],
     deps = [
         "//services/content/contentpb",
+        "//services/content/endpoint",
         "@com_github_z5labs_humus//humuspb",
         "@com_github_z5labs_humus//rest",
         "@io_opentelemetry_go_otel//:otel",

@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+go_library(
+    name = "content_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/z5labs/griot/services/content/cmd/content",
+    visibility = ["//visibility:private"],
+    deps = ["//services/content"],
+)
+
+go_binary(
+    name = "content",
+    embed = [":content_lib"],
+    pure = "on",
+    static = "on",
+    visibility = ["//visibility:public"],
+)
+
+pkg_tar(
+    name = "tar",
+    srcs = [":content"],
+)
+
+oci_image(
+    name = "image",
+    base = "@distroless_static",
+    entrypoint = ["/content"],
+    tars = [":tar"],
+)
