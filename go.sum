@@ -20,8 +20,6 @@ github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 h1:asbCHRVmodnJTuQ3qamDwqVOIjwqUPTYmYuemVOx+Ys=
-github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0/go.mod h1:ggCgvZ2r7uOoQjOyu2Y1NhHmEPPzzuhWgcza5M1Ji1I=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.23.0 h1:ad0vkEBuk23VJzZR9nkLVG0YAoN9coASF1GusYX6AlU=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.23.0/go.mod h1:igFoXX2ELCW06bol23DWPB5BEWfZISOzSP5K2sbLea0=
 github.com/iancoleman/orderedmap v0.3.0 h1:5cbR2grmZR/DiVt+VJopEhtVs9YGInGIxAoMJn+Ichc=
@@ -59,8 +57,6 @@ github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 h1:BHyfKlQyqbsFN5p3Ifn
 github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82/go.mod h1:lgjkn3NuSvDfVJdfcVVdX+jpBxNmX4rDAzaS45IcYoM=
 github.com/z5labs/bedrock v0.12.2 h1:B7W8RtfsJXul/NhJpftRD29HL3LCIwq8uKy+kRV+Dy4=
 github.com/z5labs/bedrock v0.12.2/go.mod h1:zZO69k7KOw8Whms4euhxBbD2N4p2PQ3NVLI0MpqrkLM=
-github.com/z5labs/humus v0.3.0 h1:PrphrbKkYzncL647CeGgLB7cj+hIXPZBfljJKK14W5I=
-github.com/z5labs/humus v0.3.0/go.mod h1:2Fw/MjBF3NX7CwzuMPoIQ/1dxK842kVVFnTT2UKaPEs=
 github.com/z5labs/humus v0.4.0 h1:YnPlbIBBHSljWCyENnwZp6jcCv6Sf5csUf1amBsJzpg=
 github.com/z5labs/humus v0.4.0/go.mod h1:2Fw/MjBF3NX7CwzuMPoIQ/1dxK842kVVFnTT2UKaPEs=
 go.opentelemetry.io/contrib/bridges/otelslog v0.6.0 h1:V/XtFJ8mMisAO2E0tXcgwi40wJUxbiz8I2/RtgaZ8AU=
