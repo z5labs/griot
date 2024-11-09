@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "endpoint",
+    srcs = ["upload_content_v1.go"],
+    importpath = "github.com/z5labs/griot/services/content/endpoint",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/ptr",
+        "//services/content/contentpb",
+        "@com_github_swaggest_openapi_go//openapi3",
+        "@com_github_z5labs_humus//rest",
+    ],
+)

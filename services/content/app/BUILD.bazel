@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "app",
+    srcs = ["app.go"],
+    importpath = "github.com/z5labs/griot/services/content/app",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//services/content/endpoint",
+        "@com_github_z5labs_humus//rest",
+    ],
+)

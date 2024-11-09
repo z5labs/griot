@@ -135,13 +135,15 @@ func NewApp(name string, opts ...Option) *App {
 }
 
 func Run[T any](r io.Reader, f func(context.Context, T) (*App, error)) {
-	humus.Run(r, func(ctx context.Context, cfg T) (humus.App, error) {
-		app, err := f(ctx, cfg)
-		if err != nil {
-			return nil, err
-		}
-		return app, nil
-	})
+	humus.Run(
+		func(ctx context.Context, cfg T) (humus.App, error) {
+			app, err := f(ctx, cfg)
+			if err != nil {
+				return nil, err
+			}
+			return app, nil
+		},
+	)
 }
 
 func (a *App) Run(ctx context.Context) error {

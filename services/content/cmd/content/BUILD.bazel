@@ -4,20 +4,20 @@ load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 go_library(
-    name = "griot_lib",
+    name = "content_lib",
     srcs = ["main.go"],
     embedsrcs = ["config.yaml"],
-    importpath = "github.com/z5labs/griot/cmd/griot",
+    importpath = "github.com/z5labs/griot/services/content/cmd/content",
     visibility = ["//visibility:private"],
     deps = [
-        "//cmd/griot/app",
-        "//internal/command",
+        "//services/content/app",
+        "@com_github_z5labs_humus//rest",
     ],
 )
 
 go_binary(
-    name = "griot",
-    embed = [":griot_lib"],
+    name = "content",
+    embed = [":content_lib"],
     pure = "on",
     static = "on",
     visibility = ["//visibility:public"],
@@ -25,7 +25,7 @@ go_binary(
 
 pkg_tar(
     name = "tar",
-    srcs = [":griot"],
+    srcs = [":content"],
 )
 
 expand_template(
@@ -48,7 +48,7 @@ expand_template(
 oci_image(
     name = "image",
     base = "@distroless_static",
-    entrypoint = ["/griot"],
+    entrypoint = ["/content"],
     labels = ":labels",
     tars = [":tar"],
 )
@@ -56,7 +56,7 @@ oci_image(
 oci_load(
     name = "load",
     image = ":image",
-    repo_tags = ["ghcr.io/z5labs/griot/griot:latest"],
+    repo_tags = ["ghcr.io/z5labs/griot/content:latest"],
 )
 
 expand_template(
@@ -75,5 +75,5 @@ oci_push(
     name = "push",
     image = ":image",
     remote_tags = ":remote_tags",
-    repository = "ghcr.io/z5labs/griot/griot",
+    repository = "ghcr.io/z5labs/griot/content",
 )
