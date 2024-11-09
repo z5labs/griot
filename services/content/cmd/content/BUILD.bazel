@@ -6,9 +6,13 @@ load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 go_library(
     name = "content_lib",
     srcs = ["main.go"],
+    embedsrcs = ["config.yaml"],
     importpath = "github.com/z5labs/griot/services/content/cmd/content",
     visibility = ["//visibility:private"],
-    deps = ["//services/content"],
+    deps = [
+        "//services/content/app",
+        "@com_github_z5labs_humus//rest",
+    ],
 )
 
 go_binary(

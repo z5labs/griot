@@ -14,8 +14,18 @@
 
 package main
 
-import "github.com/z5labs/griot/services/content"
+import (
+	"bytes"
+	_ "embed"
+
+	"github.com/z5labs/griot/services/content/app"
+
+	"github.com/z5labs/humus/rest"
+)
+
+//go:embed config.yaml
+var configBytes []byte
 
 func main() {
-	content.Run(content.InitApp)
+	rest.Run(bytes.NewReader(configBytes), app.Init)
 }
