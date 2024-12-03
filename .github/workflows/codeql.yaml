@@ -41,11 +41,11 @@ jobs:
         go-version: '1.23'
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@396bb3e45325a47dd9ef434068033c6d5bb0d11a # v3
+      uses: github/codeql-action/init@aa578102511db1f4524ed59b8cc2bae4f6e88195 # v3
       with:
         languages: ${{ matrix.language }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@396bb3e45325a47dd9ef434068033c6d5bb0d11a # v3
+      uses: github/codeql-action/analyze@aa578102511db1f4524ed59b8cc2bae4f6e88195 # v3
       with:
         category: "/language:${{matrix.language}}"
