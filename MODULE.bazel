@@ -29,6 +29,7 @@ use_repo(
     "com_github_spf13_cobra",
     "com_github_spf13_pflag",
     "com_github_stretchr_testify",
+    "com_github_swaggest_openapi_go",
     "com_github_z5labs_bedrock",
     "com_github_z5labs_humus",
     "io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp",
@@ -40,12 +41,17 @@ use_repo(
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
-    name = "distroless_base",
-    digest = "sha256:ccaef5ee2f1850270d453fdf700a5392534f8d1a8ca2acda391fbb6a06b81c86",
-    image = "gcr.io/distroless/base",
+    name = "distroless_static",
+    digest = "sha256:cc226ca14d17d01d4b278d9489da930a0dd11150df10ae95829d13e6d00fbdbf",
+    image = "gcr.io/distroless/static",
     platforms = [
         "linux/amd64",
         "linux/arm64",
     ],
 )
-use_repo(oci, "distroless_base", "distroless_base_linux_amd64", "distroless_base_linux_arm64")
+use_repo(
+    oci,
+    "distroless_static",
+    "distroless_static_linux_amd64",
+    "distroless_static_linux_arm64",
+)

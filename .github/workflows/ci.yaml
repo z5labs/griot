@@ -65,9 +65,9 @@ jobs:
 
       - name: Build Container Images
         run: |
-          tarballTargets=$(bazel query "kind(filegroup, //...)" | grep ".tar$")
-            while IFS=';' read -ra tarballs; do
-            for tarball in "${tarballs[@]}"; do
-                bazel build $tarball
-            done
-            done <<< "$tarballTargets"
+          imageTargets=$(bazel query "kind(oci_image, //...)")
+          while IFS=';' read -ra targets; do
+          for target in "${targets[@]}"; do
+              bazel build $target
+          done
+          done <<< "$imageTargets"
