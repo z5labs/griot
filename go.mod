@@ -8,7 +8,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/z5labs/bedrock v0.12.2
-	github.com/z5labs/humus v0.3.0
+	github.com/z5labs/humus v0.6.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/metric v1.31.0
