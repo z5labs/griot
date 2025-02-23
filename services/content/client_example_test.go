@@ -24,10 +24,10 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/z5labs/griot/internal/mimetype"
 	"github.com/z5labs/griot/internal/ptr"
 	"github.com/z5labs/griot/services/content/contentpb"
 
-	"github.com/z5labs/humus/rest"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -51,7 +51,7 @@ func ExampleClient_UploadContent() {
 			return
 		}
 
-		w.Header().Set("Content-Type", rest.ProtobufContentType)
+		w.Header().Set("Content-Type", mimetype.Protobuf)
 		w.WriteHeader(http.StatusOK)
 		io.Copy(w, bytes.NewReader(b))
 	}))

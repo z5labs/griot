@@ -1,4 +1,4 @@
-// Copyright 2024 Z5Labs and Contributors
+// Copyright 2025 Z5Labs and Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package mimetype
 
-import (
-	"context"
-
-	"github.com/z5labs/griot/services/content/endpoint/v1"
-
-	"github.com/z5labs/humus/rest"
-)
-
-type Config struct {
-	rest.Config `config:",squash"`
-}
-
-func Init(ctx context.Context, cfg Config) (*rest.Api, error) {
-	api := rest.NewApi(
-		cfg.OpenApi.Title,
-		cfg.OpenApi.Version,
-	)
-
-	endpoint.UploadContent(api)
-
-	return api, nil
-}
+const Protobuf = "application/protobuf"

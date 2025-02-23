@@ -27,11 +27,11 @@ import (
 	"testing"
 
 	"github.com/z5labs/griot/internal/command"
+	"github.com/z5labs/griot/internal/noop"
 	"github.com/z5labs/griot/services/content"
 	"github.com/z5labs/griot/services/content/contentpb"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/z5labs/bedrock/pkg/noop"
 )
 
 func TestApp(t *testing.T) {

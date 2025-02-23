@@ -22,6 +22,8 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/z5labs/bedrock"
+	"github.com/z5labs/bedrock/appbuilder"
 	"github.com/z5labs/humus"
 	"go.opentelemetry.io/otel"
 )
@@ -135,15 +137,11 @@ func NewApp(name string, opts ...Option) *App {
 }
 
 func Run[T any](r io.Reader, f func(context.Context, T) (*App, error)) {
-	humus.Run(
-		func(ctx context.Context, cfg T) (humus.App, error) {
-			app, err := f(ctx, cfg)
-			if err != nil {
-				return nil, err
-			}
-			return app, nil
-		},
-	)
+	builder := bedrock.AppBuilderFunc[T](func(ctx context.Context, cfg T) (bedrock.App, error) {
+		return nil, nil
+	})
+	runner := humus.NewRunner(appbuilder.FromConfig(builder))
+	runner.Run(context.Background(), humus.DefaultConfig())
 }
 
 func (a *App) Run(ctx context.Context) error {

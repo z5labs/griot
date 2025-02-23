@@ -26,10 +26,10 @@ import (
 	"net/http"
 	"net/textproto"
 
+	"github.com/z5labs/griot/internal/mimetype"
 	"github.com/z5labs/griot/services/content/contentpb"
 
 	"github.com/z5labs/humus/humuspb"
-	"github.com/z5labs/humus/rest"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -125,7 +125,7 @@ func (c *Client) UploadContent(ctx context.Context, req *UploadContentRequest) (
 	defer resp.Body.Close()
 
 	contentType := resp.Header.Get("Content-Type")
-	if contentType != rest.ProtobufContentType {
+	if contentType != mimetype.Protobuf {
 		err = UnsupportedResponseContentTypeError{
 			ContentType: contentType,
 		}
@@ -197,7 +197,7 @@ func (c *Client) writeMetadata(ctx context.Context, creater partCreater, meta *c
 
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition", `form-data; name="metadata"`)
-	header.Set("Content-Type", rest.ProtobufContentType)
+	header.Set("Content-Type", mimetype.Protobuf)
 
 	part, err := creater.CreatePart(header)
 	if err != nil {

@@ -25,11 +25,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/z5labs/griot/internal/mimetype"
 	"github.com/z5labs/griot/services/content/contentpb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/z5labs/humus/humuspb"
-	"github.com/z5labs/humus/rest"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -140,7 +140,7 @@ func TestClient_UploadContent(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprintf("if the response content type is not %s", rest.ProtobufContentType), func(t *testing.T) {
+		t.Run(fmt.Sprintf("if the response content type is not %s", mimetype.Protobuf), func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer r.Body.Close()
 				_, err := io.Copy(io.Discard, r.Body)
@@ -193,7 +193,7 @@ func TestClient_UploadContent(t *testing.T) {
 					Header: make(http.Header),
 					Body:   io.NopCloser(respBody),
 				}
-				resp.Header.Set("Content-Type", rest.ProtobufContentType)
+				resp.Header.Set("Content-Type", mimetype.Protobuf)
 
 				return resp, nil
 			})
@@ -230,7 +230,7 @@ func TestClient_UploadContent(t *testing.T) {
 					return
 				}
 
-				w.Header().Set("Content-Type", rest.ProtobufContentType)
+				w.Header().Set("Content-Type", mimetype.Protobuf)
 				w.WriteHeader(http.StatusInternalServerError)
 				io.Copy(w, bytes.NewReader(b))
 			}))
@@ -274,7 +274,7 @@ func TestClient_UploadContent(t *testing.T) {
 					return
 				}
 
-				w.Header().Set("Content-Type", rest.ProtobufContentType)
+				w.Header().Set("Content-Type", mimetype.Protobuf)
 				w.WriteHeader(http.StatusInternalServerError)
 				io.Copy(w, bytes.NewReader(b))
 			}))
@@ -316,7 +316,7 @@ func TestClient_UploadContent(t *testing.T) {
 					return
 				}
 
-				w.Header().Set("Content-Type", rest.ProtobufContentType)
+				w.Header().Set("Content-Type", mimetype.Protobuf)
 				w.WriteHeader(http.StatusOK)
 				io.Copy(w, bytes.NewReader(b))
 			}))

@@ -12,27 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package endpoint
 
 import (
-	"context"
-
-	"github.com/z5labs/griot/services/content/endpoint/v1"
-
 	"github.com/z5labs/humus/rest"
 )
 
-type Config struct {
-	rest.Config `config:",squash"`
-}
-
-func Init(ctx context.Context, cfg Config) (*rest.Api, error) {
-	api := rest.NewApi(
-		cfg.OpenApi.Title,
-		cfg.OpenApi.Version,
-	)
-
-	endpoint.UploadContent(api)
-
-	return api, nil
-}
+func UploadContent(api *rest.Api) {}
