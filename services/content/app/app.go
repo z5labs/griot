@@ -17,7 +17,7 @@ package app
 import (
 	"context"
 
-	"github.com/z5labs/griot/services/content/endpoint/v1"
+	"github.com/z5labs/griot/services/content/endpoint"
 
 	"github.com/z5labs/humus/rest"
 )
