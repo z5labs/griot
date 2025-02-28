@@ -9,7 +9,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/z5labs/bedrock v0.12.2
 	github.com/z5labs/humus v0.3.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/metric v1.34.0
 	golang.org/x/sync v0.11.0
